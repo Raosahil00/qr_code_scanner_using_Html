@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>QR Code Scanner</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 400px;  
+            width: 100%;
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        #reader {
+            width: 350px !important;  
+            height: 350px !important; 
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+        .result {
+            background-color: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            max-height: 300px;  
+            overflow-y: auto;   
+        }
+
+
+        .result:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 7px 20px rgba(0,0,0,0.1);
+        }
+
+        .open-link-btn {
+            background: linear-gradient(45deg, #2196F3, #21CBF3);
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            margin-top: 15px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+        }
+
+        .open-link-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
+        }
+
+        p {
+            color: #34495e;
+            font-size: 16px;
+            line-height: 1.6;
+            margin: 10px 0;
+        }
+
+        video {
+            border-radius: 10px !important;
+        }
+
+        #reader * {
+            border-radius: 8px;
+        }
+
+        #reader__scan_region {
+            background: white !important;
+            border-radius: 10px !important;
+        }
+
+        #reader__scan_region > img {
+            display: none; 
+        }
+
+        @keyframes scanning {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0); }
+        }
+
+        .scanning-animation {
+            animation: scanning 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div id="reader"></div>
+    <div id="result" class="result"></div>
+
+    <script>
+        let html5QrcodeScanner = null;
+        let lastResult = null;
+        let scannedResults = [];  
+        function onScanSuccess(decodedText, decodedResult) {
+            if (lastResult === decodedText) {
+                return;
+            }
+            
+            lastResult = decodedText;
+            console.log(`Code scanned = ${decodedText}`, decodedResult);
+            
+            scannedResults.unshift({
+                text: decodedText,
+                timestamp: new Date().toLocaleTimeString()
+            });
+            
+            updateResultsDisplay();
+        }
+
+        function updateResultsDisplay() {
+            const resultDiv = document.getElementById('result');
+            let resultsHTML = '';
+            
+            scannedResults.forEach((result, index) => {
+                if (result.text.startsWith('http://') || result.text.startsWith('https://')) {
+                    resultsHTML += `
+                        <div style="border-bottom: 1px solid #eee; padding: 10px 0;">
+                            <p><strong>Scan ${index + 1}</strong> (${result.timestamp})</p>
+                            <p>URL: ${result.text}</p>
+                            <button class="open-link-btn" onclick="openLink('${result.text}')">
+                                Open Link
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    resultsHTML += `
+                        <div style="border-bottom: 1px solid #eee; padding: 10px 0;">
+                            <p><strong>Scan ${index + 1}</strong> (${result.timestamp})</p>
+                            <p>Data: ${result.text}</p>
+                        </div>
+                    `;
+                }
+            });
+            
+            resultDiv.innerHTML = resultsHTML;
+        }
+
+        function openLink(url) {
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.clear();
+            }
+            window.open(url, '_blank');
+            setTimeout(() => {
+                startScanner();
+            }, 1000);
+        }
+
+        function onScanError(errorMessage) {
+            console.warn(`QR error = ${errorMessage}`);
+        }
+
+        function startScanner() {
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.clear();
+            }
+
+            html5QrcodeScanner = new Html5QrcodeScanner(
+                "reader",
+                { 
+                    fps: 10,
+                    qrbox: 150,  
+                    rememberLastUsedCamera: true
+                }
+            );
+            
+            html5QrcodeScanner.render(onScanSuccess, onScanError);
+        }
+
+        window.onload = startScanner;
+    </script>
+</body>
+</html>
