@@ -48,7 +48,36 @@
             overflow-y: auto;   
         }
 
+        .instagram-result {
+            background: linear-gradient(45deg, #833AB4, #C13584, #E1306C, #FD1D1D);
+            color: white !important;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+        }
 
+        .instagram-result p {
+            color: white !important;
+        }
+
+        .instagram-btn {
+            background: linear-gradient(45deg, #833AB4, #C13584);
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            margin-top: 15px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(131, 58, 180, 0.3);
+        }
+
+        .instagram-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(131, 58, 180, 0.4);
+        }
         .result:hover {
             transform: translateY(-2px);
             box-shadow: 0 7px 20px rgba(0,0,0,0.1);
@@ -109,13 +138,34 @@
     </style>
 </head>
 <body>
-    <div id="reader"></div>
-    <div id="result" class="result"></div>
+    <div class="container">
+        <h1>QR Code Scanner</h1>
+        <div id="reader"></div>
+        <div id="result" class="result"></div>
+    </div>
 
     <script>
         let html5QrcodeScanner = null;
         let lastResult = null;
-        let scannedResults = [];  
+        let scannedResults = [];
+
+        function isInstagramURL(url) {
+            return url.includes('instagram.com') || 
+                   url.includes('ig.me') || 
+                   url.includes('instagram://');
+        }
+
+        function formatInstagramURL(url) {
+            
+            if (url.startsWith('instagram://')) {
+                return url.replace('instagram://', 'https://www.instagram.com/');
+            }
+            if (url.startsWith('ig.me')) {
+                return 'https://www.' + url;
+            }
+            return url;
+        }
+
         function onScanSuccess(decodedText, decodedResult) {
             if (lastResult === decodedText) {
                 return;
@@ -124,9 +174,13 @@
             lastResult = decodedText;
             console.log(`Code scanned = ${decodedText}`, decodedResult);
             
+            let isInsta = isInstagramURL(decodedText);
+            let formattedUrl = isInsta ? formatInstagramURL(decodedText) : decodedText;
+            
             scannedResults.unshift({
-                text: decodedText,
-                timestamp: new Date().toLocaleTimeString()
+                text: formattedUrl,
+                timestamp: new Date().toLocaleTimeString(),
+                isInstagram: isInsta
             });
             
             updateResultsDisplay();
@@ -137,11 +191,21 @@
             let resultsHTML = '';
             
             scannedResults.forEach((result, index) => {
-                if (result.text.startsWith('http://') || result.text.startsWith('https://')) {
+                if (result.isInstagram) {
+                    resultsHTML += `
+                        <div class="instagram-result">
+                            <p><strong>Scan ${index + 1}</strong> (${result.timestamp})</p>
+                            <p>📸 Instagram Link</p>
+                            <button class="instagram-btn" onclick="openLink('${result.text}')">
+                                Open in Instagram
+                            </button>
+                        </div>
+                    `;
+                } else if (result.text.startsWith('http://') || result.text.startsWith('https://')) {
                     resultsHTML += `
                         <div style="border-bottom: 1px solid #eee; padding: 10px 0;">
                             <p><strong>Scan ${index + 1}</strong> (${result.timestamp})</p>
-                            <p>URL: ${result.text}</p>
+                            <p>🔗 URL: ${result.text}</p>
                             <button class="open-link-btn" onclick="openLink('${result.text}')">
                                 Open Link
                             </button>
@@ -151,7 +215,7 @@
                     resultsHTML += `
                         <div style="border-bottom: 1px solid #eee; padding: 10px 0;">
                             <p><strong>Scan ${index + 1}</strong> (${result.timestamp})</p>
-                            <p>Data: ${result.text}</p>
+                            <p>📄 Data: ${result.text}</p>
                         </div>
                     `;
                 }
@@ -183,7 +247,7 @@
                 "reader",
                 { 
                     fps: 10,
-                    qrbox: 150,  
+                    qrbox: 150,
                     rememberLastUsedCamera: true
                 }
             );
